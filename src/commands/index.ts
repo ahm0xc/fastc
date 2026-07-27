@@ -39,7 +39,7 @@ const API_URL = "https://api.fast.com/netflix/speedtest/v2";
 const FALLBACK_TOKEN = "YXNkZmFzZGxmbnNkYWZoYXNkZmhrYWxm";
 const CONNECTIONS = 5;
 const DURATION_MS = 10_000;
-const TICK_INTERVAL_MS = 100;
+const TICK_INTERVAL_MS = 200;
 
 class TokenRejectedError extends Error {}
 
@@ -228,7 +228,7 @@ async function measureTransfer(
       .join("");
 
     const [speedVal, speedUnit] = formatSpeedParts(instantMbps);
-    const line = `\r${colorFn(arrow)} ${speedVal}${pc.gray(speedUnit)}  ${colorFn(chart)}  ${pc.gray(`peak ${formatSpeed(peakMbps)}`)}`;
+    const line = `\r${colorFn(arrow)} ${speedVal.padStart(6)}${pc.gray(speedUnit)}  ${colorFn(chart)}  ${pc.gray(`peak ${formatSpeed(peakMbps)}`)}`;
     process.stdout.write(line);
   }, TICK_INTERVAL_MS);
 
