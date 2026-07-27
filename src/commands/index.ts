@@ -30,8 +30,8 @@ export async function runSpeedTest() {
   const uploadSpeed = await measureTransfer(used, "upload");
 
   process.stdout.write("\n");
-  console.log(`\n${pc.green(formatSpeed(downloadSpeed))}`);
-  console.log(`${pc.magenta(formatSpeed(uploadSpeed))}`);
+  console.log(`\n${pc.green("↓")} ${pc.green(formatSpeed(downloadSpeed))}`);
+  console.log(`${pc.magenta("↑")} ${pc.magenta(formatSpeed(uploadSpeed))}`);
 }
 
 const SITE_URL = "https://fast.com/";
