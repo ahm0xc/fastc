@@ -1,8 +1,10 @@
 {
-  "name": "fastc",
+  "name": "@ahm0xc/fastc",
   "module": "src/index.ts",
+  "description": "A utility cli to check your internet speed.",
   "type": "module",
-  "private": true,
+  "version": "0.0.1",
+  "private": false,
   "devDependencies": {
     "@types/bun": "latest"
   },
