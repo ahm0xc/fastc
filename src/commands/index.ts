@@ -1,7 +1,37 @@
 import pc from "picocolors";
 
 export async function runSpeedTest() {
-  await measureDownloadRealtime();
+  let targets: string[] | null = null;
+  try {
+    targets = await getTargets(FALLBACK_TOKEN);
+  } catch (err) {
+    if (err instanceof TokenRejectedError) {
+      try {
+        const token = await getTokenFromSite();
+        targets = await getTargets(token);
+      } catch (inner) {
+        console.error("failed to refresh token and get targets:", inner);
+        return;
+      }
+    } else {
+      console.error("failed to get targets:", err);
+      return;
+    }
+  }
+
+  if (!targets || targets.length === 0) {
+    console.error("no targets available");
+    return;
+  }
+
+  const used = targets.slice(0, CONNECTIONS);
+
+  const downloadSpeed = await measureTransfer(used, "download");
+  const uploadSpeed = await measureTransfer(used, "upload");
+
+  process.stdout.write("\n");
+  console.log(`\n${pc.green(formatSpeed(downloadSpeed))}`);
+  console.log(`${pc.magenta(formatSpeed(uploadSpeed))}`);
 }
 
 const SITE_URL = "https://fast.com/";
@@ -105,6 +135,32 @@ async function downloadWorker(
   }
 }
 
+async function uploadWorker(
+  url: string,
+  signal: AbortSignal,
+  addBytes: (n: number) => void,
+) {
+  try {
+    const chunkSize = 256 * 1024;
+    const payload = new Uint8Array(chunkSize).fill(0x41);
+    while (!signal.aborted) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "User-Agent": "node-fast/1.0",
+        },
+        body: payload,
+        signal,
+      });
+      if (!res.ok) return;
+      addBytes(chunkSize);
+    }
+  } catch {
+    return;
+  }
+}
+
 function bytesToMbps(bytes: number, seconds: number): number {
   return (bytes * 8) / (seconds * 1_000_000);
 }
@@ -119,31 +175,15 @@ function formatSpeedParts(mbps: number): [string, string] {
   return [`${mbps.toFixed(2)}`, " Mbps"];
 }
 
-async function measureDownloadRealtime(): Promise<void> {
-  let targets: string[] | null = null;
-  try {
-    targets = await getTargets(FALLBACK_TOKEN);
-  } catch (err) {
-    if (err instanceof TokenRejectedError) {
-      try {
-        const token = await getTokenFromSite();
-        targets = await getTargets(token);
-      } catch (inner) {
-        console.error("failed to refresh token and get targets:", inner);
-        return;
-      }
-    } else {
-      console.error("failed to get targets:", err);
-      return;
-    }
-  }
+async function measureTransfer(
+  used: string[],
+  type: "download" | "upload",
+): Promise<number> {
+  const isDownload = type === "download";
+  const workerFn = isDownload ? downloadWorker : uploadWorker;
+  const colorFn = isDownload ? pc.green : pc.magenta;
+  const arrow = isDownload ? "↓" : "↑";
 
-  if (!targets || targets.length === 0) {
-    console.error("no targets available");
-    return;
-  }
-
-  const used = targets.slice(0, CONNECTIONS);
   let totalBytes = 0;
   const addBytes = (n: number) => {
     totalBytes += n;
@@ -152,7 +192,7 @@ async function measureDownloadRealtime(): Promise<void> {
   const controller = new AbortController();
   const { signal } = controller;
 
-  const workerPromises = used.map((t) => downloadWorker(t, signal, addBytes));
+  const workerPromises = used.map((t) => workerFn(t, signal, addBytes));
 
   let prevBytes = 0;
   let peakMbps = 0;
@@ -188,7 +228,7 @@ async function measureDownloadRealtime(): Promise<void> {
       .join("");
 
     const [speedVal, speedUnit] = formatSpeedParts(instantMbps);
-    const line = `\r${pc.green("↓")} ${speedVal}${pc.gray(speedUnit)}  ${pc.green(chart)}  ${pc.gray(`peak ${formatSpeed(peakMbps)}`)}`;
+    const line = `\r${colorFn(arrow)} ${speedVal}${pc.gray(speedUnit)}  ${colorFn(chart)}  ${pc.gray(`peak ${formatSpeed(peakMbps)}`)}`;
     process.stdout.write(line);
   }, TICK_INTERVAL_MS);
 
@@ -206,6 +246,5 @@ async function measureDownloadRealtime(): Promise<void> {
   const totalElapsedSec = Math.max(0.001, totalElapsedMs / 1000);
   const finalMbps = bytesToMbps(totalBytes, totalElapsedSec);
 
-  process.stdout.write("\n");
-  console.log(`\n${pc.green(formatSpeed(finalMbps))}`);
+  return finalMbps;
 }
