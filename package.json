@@ -1,0 +1,16 @@
+{
+  "name": "fastc",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "cac": "^7.0.0",
+    "picocolors": "^1.1.1"
+  }
+}
