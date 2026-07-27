@@ -2,7 +2,7 @@
 
 A fast internet speed test CLI powered by fast.com.
 
-![Demo](./assets/demo.gif)
+![Demo](https://raw.githubusercontent.com/ahm0xc/fastc/main/assets/demo.gif)
 
 ## Installation
 
