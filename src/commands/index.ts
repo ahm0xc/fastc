@@ -114,6 +114,11 @@ function formatSpeed(mbps: number): string {
   return `${mbps.toFixed(2)} Mbps`;
 }
 
+function formatSpeedParts(mbps: number): [string, string] {
+  if (mbps >= 1000) return [`${(mbps / 1000).toFixed(2)}`, " Gbps"];
+  return [`${mbps.toFixed(2)}`, " Mbps"];
+}
+
 async function measureDownloadRealtime(): Promise<void> {
   let targets: string[] | null = null;
   try {
@@ -152,24 +157,38 @@ async function measureDownloadRealtime(): Promise<void> {
   let prevBytes = 0;
   let peakMbps = 0;
   const startTime = Date.now();
+  const BAR_WIDTH = 16;
+  const speedHistory: number[] = Array(BAR_WIDTH).fill(0);
+  const BAR_LEVELS = [" ", "⣀", "⣤", "⣶", "⣿"];
 
-  process.stdout.write("\n");
   const interval = setInterval(() => {
     const now = Date.now();
     const elapsedMs = now - startTime;
     const elapsedSec = Math.max(0.001, elapsedMs / 1000);
 
-    const currentTotal = totalBytes;
-    const delta = currentTotal - prevBytes;
-    prevBytes = currentTotal;
+    const delta = totalBytes - prevBytes;
+    prevBytes = totalBytes;
 
     const instantMbps = bytesToMbps(delta, TICK_INTERVAL_MS / 1000);
-    const avgMbps = bytesToMbps(currentTotal, elapsedSec);
     if (instantMbps > peakMbps) peakMbps = instantMbps;
 
-    const line = `\r${pc.green("↓")} ${formatSpeed(instantMbps)} ${pc.gray(
-      `peak ${formatSpeed(peakMbps)}`,
-    )}`;
+    speedHistory.push(instantMbps);
+    if (speedHistory.length > BAR_WIDTH) speedHistory.shift();
+    const windowMax = Math.max(...speedHistory, 1);
+    const chart = speedHistory
+      .map(
+        (s) =>
+          BAR_LEVELS[
+            Math.min(
+              Math.round((s / windowMax) * (BAR_LEVELS.length - 1)),
+              BAR_LEVELS.length - 1,
+            )
+          ],
+      )
+      .join("");
+
+    const [speedVal, speedUnit] = formatSpeedParts(instantMbps);
+    const line = `\r${pc.green("↓")} ${speedVal}${pc.gray(speedUnit)}  ${pc.green(chart)}  ${pc.gray(`peak ${formatSpeed(peakMbps)}`)}`;
     process.stdout.write(line);
   }, TICK_INTERVAL_MS);
 
