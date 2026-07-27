@@ -1,39 +1,5 @@
 import pc from "picocolors";
 
-export async function runSpeedTest() {
-  let targets: string[] | null = null;
-  try {
-    targets = await getTargets(FALLBACK_TOKEN);
-  } catch (err) {
-    if (err instanceof TokenRejectedError) {
-      try {
-        const token = await getTokenFromSite();
-        targets = await getTargets(token);
-      } catch (inner) {
-        console.error("failed to refresh token and get targets:", inner);
-        return;
-      }
-    } else {
-      console.error("failed to get targets:", err);
-      return;
-    }
-  }
-
-  if (!targets || targets.length === 0) {
-    console.error("no targets available");
-    return;
-  }
-
-  const used = targets.slice(0, CONNECTIONS);
-
-  const downloadSpeed = await measureTransfer(used, "download");
-  const uploadSpeed = await measureTransfer(used, "upload");
-
-  process.stdout.write("\n");
-  console.log(`\n${pc.green("↓")} ${pc.green(formatSpeed(downloadSpeed))}`);
-  console.log(`${pc.magenta("↑")} ${pc.magenta(formatSpeed(uploadSpeed))}`);
-}
-
 const SITE_URL = "https://fast.com/";
 const API_URL = "https://api.fast.com/netflix/speedtest/v2";
 const FALLBACK_TOKEN = "YXNkZmFzZGxmbnNkYWZoYXNkZmhrYWxm";
@@ -247,4 +213,38 @@ async function measureTransfer(
   const finalMbps = bytesToMbps(totalBytes, totalElapsedSec);
 
   return finalMbps;
+}
+
+export async function runSpeedTest() {
+  let targets: string[] | null = null;
+  try {
+    targets = await getTargets(FALLBACK_TOKEN);
+  } catch (err) {
+    if (err instanceof TokenRejectedError) {
+      try {
+        const token = await getTokenFromSite();
+        targets = await getTargets(token);
+      } catch (inner) {
+        console.error("failed to refresh token and get targets:", inner);
+        return;
+      }
+    } else {
+      console.error("failed to get targets:", err);
+      return;
+    }
+  }
+
+  if (!targets || targets.length === 0) {
+    console.error("no targets available");
+    return;
+  }
+
+  const used = targets.slice(0, CONNECTIONS);
+
+  const downloadSpeed = await measureTransfer(used, "download");
+  const uploadSpeed = await measureTransfer(used, "upload");
+
+  process.stdout.write("\n");
+  console.log(`\n${pc.green("↓")} ${pc.green(formatSpeed(downloadSpeed))}`);
+  console.log(`${pc.magenta("↑")} ${pc.magenta(formatSpeed(uploadSpeed))}`);
 }
