@@ -3,8 +3,18 @@
   "module": "src/index.ts",
   "description": "A utility cli to check your internet speed.",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": false,
+  "bin": {
+    "fastc": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "prepublishOnly": "bun run build"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
